@@ -2,15 +2,26 @@ import React, { useState } from "react";
 import { Container, VStack, Input, Button, Text, Box, HStack, Icon } from "@chakra-ui/react";
 import { FaCar, FaMapMarkerAlt, FaExclamationTriangle, FaTachometerAlt } from "react-icons/fa";
 
-const generateRandomTripData = (address) => {
-  // Simulate trip data
-  const destinations = ["Park", "Mall", "Office", "Restaurant", "Gym"];
+const generateRandomTripData = async (address) => {
+  const apiKey = "YOUR_GOOGLE_MAPS_API_KEY";
+  const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
+  const geocodeResponse = await fetch(geocodeUrl);
+  const geocodeData = await geocodeResponse.json();
+  const location = geocodeData.results[0].geometry.location;
+
+  const placesUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${location.lat},${location.lng}&radius=1500&type=point_of_interest&key=${apiKey}`;
+  const placesResponse = await fetch(placesUrl);
+  const placesData = await placesResponse.json();
+  const destinations = placesData.results.map((place) => place.name);
   const destination = destinations[Math.floor(Math.random() * destinations.length)];
-  const events = [
-    { type: "brake", location: "Intersection" },
-    { type: "acceleration", location: "Highway" },
-    { type: "speeding", location: "School Zone" },
-  ];
+
+  const directionsUrl = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(address)}&destination=${encodeURIComponent(destination)}&key=${apiKey}`;
+  const directionsResponse = await fetch(directionsUrl);
+  const directionsData = await directionsResponse.json();
+  const events = directionsData.routes[0].legs[0].steps.map((step) => ({
+    type: step.maneuver,
+    location: step.html_instructions,
+  }));
 
   return {
     start: address,
@@ -23,8 +34,8 @@ const Index = () => {
   const [address, setAddress] = useState("");
   const [tripData, setTripData] = useState(null);
 
-  const handleSimulateTrip = () => {
-    const data = generateRandomTripData(address);
+  const handleSimulateTrip = async () => {
+    const data = await generateRandomTripData(address);
     setTripData(data);
   };
 
